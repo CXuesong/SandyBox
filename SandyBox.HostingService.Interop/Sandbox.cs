@@ -16,13 +16,13 @@ namespace SandyBox.HostingService.Interop
 
         public string Name { get; }
 
-        public abstract Task LoadFromAsync(Stream sourceStream, string sourceName);
+        public abstract Task LoadFromAsync(Stream sourceStream);
         
         public virtual async Task LoadFromAsync(string fileName)
         {
             using (var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
             {
-                await LoadFromAsync(fs, Path.GetFileName(fileName));
+                await LoadFromAsync(fs);
             }
         }
 

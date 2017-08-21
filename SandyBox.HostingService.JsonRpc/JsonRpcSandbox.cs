@@ -21,13 +21,13 @@ namespace SandyBox.HostingService.JsonRpc
             Owner = owner;
         }
 
-        public override async Task LoadFromAsync(Stream sourceStream, string sourceName)
+        public override async Task LoadFromAsync(Stream sourceStream)
         {
             if (sourceStream == null) throw new ArgumentNullException(nameof(sourceStream));
             using (var reader = new StreamReader(sourceStream))
             {
                 var s = await reader.ReadToEndAsync();
-                await Owner.HostingServerStub.LoadContent(Id, s, sourceName);
+                await Owner.HostingServerStub.LoadSource(Id, s);
             }
         }
 

@@ -94,9 +94,9 @@ namespace SandyBox.HostingService.JsonRpc
                 txPipe.DisposeLocalCopyOfClientHandle();
                 rxPipe.DisposeLocalCopyOfClientHandle();
 
-                var procReader = new ByLineTextMessageReader(rxPipe);
+                var procReader = new ByLineTextMessageReader(rxPipe) {LeaveReaderOpen = true};
                 localDisposables.Add(procReader);
-                var procWriter = new ByLineTextMessageWriter(txPipe);
+                var procWriter = new ByLineTextMessageWriter(txPipe) {LeaveWriterOpen = true};
                 localDisposables.Add(procWriter);
                 // Wait for host to start up.
                 using (var cts = new CancellationTokenSource(5000))

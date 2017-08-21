@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0-preview-20170517-02" />
+    <PackageReference Include="xunit" Version="2.2.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SandyBox.CSharp.Interop\SandyBox.CSharp.Interop.csproj" />
+    <ProjectReference Include="..\SandyBox.HostingService.Interop\SandyBox.HostingService.Interop.csproj" />
+    <ProjectReference Include="..\SandyBox.HostingService.JsonRpc\SandyBox.HostingService.JsonRpc.csproj" />
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="powershell -ExecutionPolicy Unrestricted -File &quot;$(SolutionDir)BuildingScripts\CopyOutput.ps1&quot; &quot;$(SolutionDir)SandyBox.CSharp.HostingServer\bin\Debug\net462&quot; &quot;$(TargetDir)CSHost&quot;" />
+  </Target>
+
+</Project>

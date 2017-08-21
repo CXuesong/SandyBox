@@ -11,7 +11,7 @@ namespace SandyBox.HostingService.JsonRpc
         Task<int> CreateSandbox(string sandboxName);
 
         [JsonRpcMethod]
-        Task LoadContent(int sandbox, string content, string fileName);
+        Task LoadSource(int sandbox, string content);
 
         [JsonRpcMethod]
         Task<JToken> InvokeFunction(int sandbox, string name, JArray positionalParameters, JObject namedParameters);
