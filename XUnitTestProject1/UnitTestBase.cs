@@ -3,7 +3,7 @@ using Xunit.Abstractions;
 
 namespace XUnitTestProject1
 {
-    public class UnitTestBase
+    public class UnitTestBase : IDisposable
     {
 
         public UnitTestBase(ITestOutputHelper output)
@@ -14,5 +14,17 @@ namespace XUnitTestProject1
 
         public ITestOutputHelper Output { get; }
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
     }
 }

@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using SandyBox.CSharp.HostingServer.Ambient;
 using SandyBox.CSharp.Interop;
@@ -17,9 +20,28 @@ namespace SandyBox.CSharp.HostingServer
         private IModule _ClientModule;
         private readonly Dictionary<string, IList<MethodInfo>> nameMethodDict = new Dictionary<string, IList<MethodInfo>>();
 
+        static SandboxLoader()
+        {
+            if ((bool?)AppDomain.CurrentDomain.GetData("InSandbox") == true)
+            {
+                AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+            }
+        }
+
+        private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            var name = new AssemblyName(args.Name);
+            return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName() == name);
+        }
+
         internal SandboxLoader()
         {
 
+        }
+
+        public void LoadAssembly(string assemblyPath)
+        {
+            Assembly.LoadFrom(assemblyPath);
         }
 
         public void LoadModule(string assemblyPath)
@@ -35,9 +57,10 @@ namespace SandyBox.CSharp.HostingServer
                 if (matches.Length > 1) throw new AmbiguousModuleException();
                 moduleType = matches[0];
             }
+            IModule localModule = null;
             try
             {
-                var localModule = (IModule) Activator.CreateInstance(moduleType);
+                localModule = (IModule)Activator.CreateInstance(moduleType);
                 localModule.Initialize(new SandboxAmbient());
                 foreach (var method in moduleType.GetMethods(BindingFlags.Instance | BindingFlags.Static |
                                                              BindingFlags.Public))
@@ -53,10 +76,20 @@ namespace SandyBox.CSharp.HostingServer
             }
             catch (Exception ex)
             {
+                (localModule as IDisposable)?.Dispose();
                 throw new ModuleLoaderException(ex);
             }
         }
 
+        // This is remoting-friendly.
+        public byte[] InvokeBson(string functionName, byte[] positionalParameters, byte[] namedParameters)
+        {
+            var result = Invoke(functionName, Utility.BsonDeserialize<IList<JToken>>(positionalParameters),
+                Utility.BsonDeserialize<IDictionary<string, JToken>>(namedParameters));
+            return Utility.BsonSerialize(result);
+        }
+
+        // JToken is not serializable
         public JToken Invoke(string functionName, IList<JToken> positionalParameters,
             IDictionary<string, JToken> namedParameters)
         {
@@ -79,7 +112,7 @@ namespace SandyBox.CSharp.HostingServer
             if (method.ReturnParameter.ParameterType == typeof(void)) return null;
             return ModuleFunctionBinder.SerializeReturnValue(result);
         }
-        
+
         public IModule ClientModule => _ClientModule;
 
         public void Dispose()

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO.Pipes;
 using System.Text;
 using System.Threading;
@@ -19,6 +20,7 @@ namespace SandyBox.CSharp.HostingServer
 
         static void Main(string[] args)
         {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-us");
             Console.InputEncoding = Encoding.UTF8;
             Console.OutputEncoding = Encoding.UTF8;
             CommandLineArguments.ParseFrom(args);

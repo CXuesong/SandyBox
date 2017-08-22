@@ -15,7 +15,6 @@ namespace SandyBox.CSharp.HostingServer
             return RequestContext.Features.Get<HostingServiceContext>().CreateSandbox(sandboxName);
         }
 
-
         [JsonRpcMethod]
         public async Task LoadSource(int sandbox, string content)
         {
@@ -29,7 +28,9 @@ namespace SandyBox.CSharp.HostingServer
             IDictionary<string, JToken> namedParameters)
         {
             var sb = RequestContext.Features.Get<HostingServiceContext>().GetSandbox(sandbox);
-            return sb.Loader.Invoke(name, positionalParameters, namedParameters);
+            var resultBson = sb.Loader.InvokeBson(name, Utility.BsonSerialize(positionalParameters),
+                Utility.BsonSerialize(namedParameters));
+            return Utility.BsonDeserialize<JToken>(resultBson);
         }
 
         [JsonRpcMethod]

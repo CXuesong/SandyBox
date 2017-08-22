@@ -16,7 +16,11 @@ namespace SandyBox.CSharp.HostingServer
 {
     public class ModuleCompiler
     {
-        
+
+        private static readonly MetadataReference[] CoreReferences
+            = AppDomain.CurrentDomain.GetAssemblies().Where(a => a.GetType("System.Object") != null)
+                .Select(a => (MetadataReference) MetadataReference.CreateFromFile(a.Location)).ToArray();
+
         public ModuleCompiler()
         {
 
@@ -34,8 +38,8 @@ namespace SandyBox.CSharp.HostingServer
                 var compilation = CSharpCompilation.Create(assemblyName)
                     .WithOptions(
                         new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
+                    .AddReferences(CoreReferences)
                     .AddReferences(
-                        MetadataReference.CreateFromFile(typeof(object).GetTypeInfo().Assembly.Location),
                         MetadataReference.CreateFromFile(typeof(XElement).GetTypeInfo().Assembly.Location),
                         MetadataReference.CreateFromFile(typeof(JObject).GetTypeInfo().Assembly.Location),
                         MetadataReference.CreateFromFile(typeof(IModule).GetTypeInfo().Assembly.Location))

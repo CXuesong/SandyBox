@@ -9,6 +9,8 @@ using System.Security.Permissions;
 using System.Security.Policy;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
+using Newtonsoft.Json.Linq;
 using SandyBox.CSharp.Interop;
 
 namespace SandyBox.CSharp.HostingServer
@@ -20,7 +22,7 @@ namespace SandyBox.CSharp.HostingServer
         private readonly ModuleCompiler compiler = new ModuleCompiler();
         private int assemblyCounter = 0;
 
-        public Sandbox(string name, string workPath)
+        public Sandbox(string name, string workPath, IEnumerable<string> accessiblePaths)
         {
             if (string.IsNullOrEmpty(workPath))
                 throw new ArgumentException("Value cannot be null or empty.", nameof(workPath));
@@ -33,19 +35,28 @@ namespace SandyBox.CSharp.HostingServer
             ));
             var setup = new AppDomainSetup
             {
-                ApplicationBase = WorkPath,
+                ApplicationBase = AppDomain.CurrentDomain.SetupInformation.ApplicationBase,
             };
             var trustedAssemblies = new List<Assembly>
             {
                 typeof(SandboxLoader).Assembly,
                 typeof(IModule).Assembly,
             };
-            permissions.AddPermission(new FileIOPermission(FileIOPermissionAccess.Read,
+            permissions.AddPermission(new FileIOPermission(
+                FileIOPermissionAccess.PathDiscovery | FileIOPermissionAccess.Read,
                 trustedAssemblies.Select(a => a.Location).ToArray()));
-            permissions.AddPermission(new FileIOPermission(FileIOPermissionAccess.Read, WorkPath));
-            permissions.AddPermission(new FileIOPermission(FileIOPermissionAccess.PathDiscovery, WorkPath));
+            if (accessiblePaths != null)
+            {
+                permissions.AddPermission(new FileIOPermission(
+                    FileIOPermissionAccess.PathDiscovery | FileIOPermissionAccess.Read,
+                    accessiblePaths.ToArray()));
+            }
+            permissions.AddPermission(
+                new FileIOPermission(FileIOPermissionAccess.PathDiscovery | FileIOPermissionAccess.Read,
+                    WorkPath));
             _AppDomain = AppDomain.CreateDomain("Sandbox:" + name, null, setup, permissions,
                 trustedAssemblies.Select(a => a.Evidence.GetHostEvidence<StrongName>()).ToArray());
+            _AppDomain.SetData("InSandbox", true);
             // Create loader proxy
             var handle = Activator.CreateInstanceFrom(_AppDomain, typeof(SandboxLoader).Assembly.Location,
                 typeof(SandboxLoader).FullName, false,

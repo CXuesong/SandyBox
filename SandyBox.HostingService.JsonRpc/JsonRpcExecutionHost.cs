@@ -94,10 +94,12 @@ namespace SandyBox.HostingService.JsonRpc
                 txPipe.DisposeLocalCopyOfClientHandle();
                 rxPipe.DisposeLocalCopyOfClientHandle();
 
-                var procReader = new ByLineTextMessageReader(rxPipe) {LeaveReaderOpen = true};
+                var procReader = new ByLineTextMessageReader(rxPipe);
                 localDisposables.Add(procReader);
-                var procWriter = new ByLineTextMessageWriter(txPipe) {LeaveWriterOpen = true};
+                localDisposables.Remove(rxPipe);
+                var procWriter = new ByLineTextMessageWriter(txPipe);
                 localDisposables.Add(procWriter);
+                localDisposables.Remove(txPipe);
                 // Wait for host to start up.
                 using (var cts = new CancellationTokenSource(5000))
                 {
@@ -131,8 +133,32 @@ namespace SandyBox.HostingService.JsonRpc
             }
             catch (Exception ex)
             {
-                process?.Kill();
-                foreach (var d in localDisposables) d.Dispose();
+                if (process != null)
+                {
+                    try
+                    {
+                        if (!process.WaitForExit(1000)) process.Kill();
+                    }
+                    catch (Exception ex1)
+                    {
+                        throw new AggregateException(ex, ex1);
+                    }
+                }
+                foreach (var d in localDisposables)
+                {
+                    try
+                    {
+                        d.Dispose();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // StreamWriter will attempt to flush before disposal,
+                    }
+                    catch (Exception ex1)
+                    {
+                        throw new AggregateException(ex, ex1);
+                    }
+                }
                 localDisposables = null;
                 if (ex is ExecutionHostException) throw;
                 throw new ExecutionHostException(Prompts.CannotStartExecutionHost, ex);
