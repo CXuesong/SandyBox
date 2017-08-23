@@ -12,15 +12,20 @@ namespace SandyBox.CSharp.Interop
 
     public class Module : IModule, IDisposable
     {
-        public virtual void Dispose()
-        {
-            
-        }
+
+        public IAmbient Ambient { get; private set; }
 
         public virtual void Initialize(IAmbient ambient)
         {
+            if (ambient == null) throw new ArgumentNullException(nameof(ambient));
+            Ambient = ambient;
+        }
+
+        public virtual void Dispose()
+        {
 
         }
+
     }
 
 }

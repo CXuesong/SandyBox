@@ -15,11 +15,12 @@ using System.Xml;
 using System.Xml.Linq;
 using JsonRpc.Standard.Client;
 using Newtonsoft.Json.Linq;
+using SandyBox.CSharp.HostingServer.Ambient;
 using SandyBox.CSharp.HostingServer.JsonRpc;
 
 namespace SandyBox.CSharp.HostingServer
 {
-    public class HostingServiceContext : IDisposable
+    internal class HostingServiceContext : IDisposable
     {
         private static readonly JsonRpcProxyBuilder proxyBuilder = new JsonRpcProxyBuilder();
 
@@ -32,7 +33,7 @@ namespace SandyBox.CSharp.HostingServer
         public HostingServiceContext(JsonRpcClient rpcClient, string sandboxWorkPath)
         {
             SandboxWorkPath = sandboxWorkPath;
-            Client = proxyBuilder.CreateProxy<IHostingClient>(rpcClient);
+            HostingClient = proxyBuilder.CreateProxy<IHostingClient>(rpcClient);
         }
 
         static HostingServiceContext()
@@ -59,7 +60,7 @@ namespace SandyBox.CSharp.HostingServer
 
         public Task Disposal => disposalTcs.Task;
 
-        public IHostingClient Client { get; }
+        public IHostingClient HostingClient { get; }
 
         public int CreateSandbox(string sandboxName)
         {
@@ -73,7 +74,8 @@ namespace SandyBox.CSharp.HostingServer
             }
             var workPath = Path.Combine(SandboxWorkPath, folderName);
             Directory.CreateDirectory(workPath);
-            var sandbox = new Sandbox(sandboxName, workPath, preloadedLibraries);
+            var ambient = new SandboxAmbient(HostingClient, id);
+            var sandbox = new Sandbox(sandboxName, workPath, preloadedLibraries, ambient);
             var result = sandboxes.TryAdd(id, sandbox);
             Debug.Assert(result);
             return id;

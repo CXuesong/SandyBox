@@ -1,27 +1,34 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
 namespace SandyBox.CSharp.Interop
 {
-    public interface IAmbient : IServiceProvider
+
+    public interface IAmbient
     {
-        
+
         /// <summary>
         /// Gets the name of ambient container.
         /// </summary>
         string Name { get; }
 
+        /// <summary>
+        /// Invokes ambient-specified functions.
+        /// </summary>
+        Task<JToken> InvokeAsync(string name, JToken parameters, CancellationToken cancellationToken);
+
     }
 
     public static class AmbientExtensions
     {
-
-        public static T GetService<T>(this IAmbient ambient)
+        public static Task<JToken> InvokeAsync(this IAmbient ambient, string name, JToken parameters)
         {
             if (ambient == null) throw new ArgumentNullException(nameof(ambient));
-            var inst = ambient.GetService(typeof(T));
-            if (inst == null) return default(T);
-            return (T) inst;
+            return ambient.InvokeAsync(name, parameters, CancellationToken.None);
         }
 
     }
+
 }

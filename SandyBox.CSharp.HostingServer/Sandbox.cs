@@ -11,18 +11,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Newtonsoft.Json.Linq;
+using SandyBox.CSharp.HostingServer.Ambient;
+using SandyBox.CSharp.HostingServer.JsonRpc;
 using SandyBox.CSharp.Interop;
 
 namespace SandyBox.CSharp.HostingServer
 {
-    public sealed class Sandbox : IDisposable
+    internal sealed class Sandbox : IDisposable
     {
         private AppDomain _AppDomain;
-        private Sponsor _Sponsor;
+        private readonly Sponsor loaderSponsor;
         private readonly ModuleCompiler compiler = new ModuleCompiler();
         private int assemblyCounter = 0;
 
-        public Sandbox(string name, string workPath, IEnumerable<string> accessiblePaths)
+        public Sandbox(string name, string workPath, IEnumerable<string> accessiblePaths, SandboxAmbient ambient)
         {
             if (string.IsNullOrEmpty(workPath))
                 throw new ArgumentException("Value cannot be null or empty.", nameof(workPath));
@@ -54,18 +56,20 @@ namespace SandyBox.CSharp.HostingServer
             permissions.AddPermission(
                 new FileIOPermission(FileIOPermissionAccess.PathDiscovery | FileIOPermissionAccess.Read,
                     WorkPath));
+            // Set up AppDomain
             _AppDomain = AppDomain.CreateDomain("Sandbox: " + name, null, setup, permissions,
                 trustedAssemblies.Select(a => a.Evidence.GetHostEvidence<StrongName>()).ToArray());
+            Ambient = ambient;
             // Create loader proxy
-            var handle = Activator.CreateInstanceFrom(_AppDomain, typeof(SandboxLoader).Assembly.Location,
+            // We will pass the proxy of SandboxAmbient into loader.
+            Loader = (SandboxLoader) Activator.CreateInstanceFrom(_AppDomain,
+                typeof(SandboxLoader).Assembly.Location,
                 typeof(SandboxLoader).FullName, false,
                 BindingFlags.CreateInstance | BindingFlags.Instance | BindingFlags.NonPublic,
-                null, null, null, null);
-            var loader = (SandboxLoader)handle.Unwrap();
-            Loader = loader;
-            var lifeTime = (ILease)loader.InitializeLifetimeService();
-            var sponsor = new Sponsor();
-            lifeTime.Register(sponsor);
+                null, new object[] {Ambient}, null, null).Unwrap();
+            var lifeTime = (ILease)Loader.InitializeLifetimeService();
+            loaderSponsor = new Sponsor();
+            lifeTime.Register(loaderSponsor);
         }
 
         public string Name { get; }
@@ -83,15 +87,16 @@ namespace SandyBox.CSharp.HostingServer
         /// <summary>
         /// Gets a proxy of the loader in the sandbox appdomain.
         /// </summary>
-        internal SandboxLoader Loader { get; }
+        public SandboxLoader Loader { get; }
+
+        public SandboxAmbient Ambient { get; }
 
         public void Dispose()
         {
             if (_AppDomain != null)
             {
                 Loader.Dispose();
-                _Sponsor.Release();
-                _Sponsor = null;
+                loaderSponsor.Release();
                 AppDomain.Unload(_AppDomain);
                 _AppDomain = null;
             }

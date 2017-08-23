@@ -20,10 +20,12 @@ namespace SandyBox.CSharp.HostingServer
         private IModule _ClientModule;
         private readonly Dictionary<string, IList<MethodInfo>> nameMethodDict = new Dictionary<string, IList<MethodInfo>>();
 
-        internal SandboxLoader()
+        internal SandboxLoader(IAmbient ambient)
         {
-
+            Ambient = ambient ?? throw new ArgumentNullException(nameof(ambient));
         }
+
+        public IAmbient Ambient { get; }
 
         public void LoadAssembly(string assemblyPath)
         {
@@ -47,7 +49,7 @@ namespace SandyBox.CSharp.HostingServer
             try
             {
                 localModule = (IModule)Activator.CreateInstance(moduleType);
-                localModule.Initialize(new SandboxAmbient());
+                localModule.Initialize(Ambient);
                 foreach (var method in moduleType.GetMethods(BindingFlags.Instance | BindingFlags.Static |
                                                              BindingFlags.Public))
                 {

@@ -64,7 +64,7 @@ namespace SandyBox.CSharp.HostingServer
                 using (clientHandler.Attach(reader, writer))
                 {
                     // Started up.
-                    serviceContext.Client.NotifyStarted();
+                    serviceContext.HostingClient.NotifyStarted();
                     // Wait for exit
                     serviceContext.Disposal.Wait();
                 }
