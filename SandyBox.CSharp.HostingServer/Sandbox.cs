@@ -54,9 +54,8 @@ namespace SandyBox.CSharp.HostingServer
             permissions.AddPermission(
                 new FileIOPermission(FileIOPermissionAccess.PathDiscovery | FileIOPermissionAccess.Read,
                     WorkPath));
-            _AppDomain = AppDomain.CreateDomain("Sandbox:" + name, null, setup, permissions,
+            _AppDomain = AppDomain.CreateDomain("Sandbox: " + name, null, setup, permissions,
                 trustedAssemblies.Select(a => a.Evidence.GetHostEvidence<StrongName>()).ToArray());
-            _AppDomain.SetData("InSandbox", true);
             // Create loader proxy
             var handle = Activator.CreateInstanceFrom(_AppDomain, typeof(SandboxLoader).Assembly.Location,
                 typeof(SandboxLoader).FullName, false,

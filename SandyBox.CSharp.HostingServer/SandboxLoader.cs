@@ -20,20 +20,6 @@ namespace SandyBox.CSharp.HostingServer
         private IModule _ClientModule;
         private readonly Dictionary<string, IList<MethodInfo>> nameMethodDict = new Dictionary<string, IList<MethodInfo>>();
 
-        static SandboxLoader()
-        {
-            if ((bool?)AppDomain.CurrentDomain.GetData("InSandbox") == true)
-            {
-                AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-            }
-        }
-
-        private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
-        {
-            var name = new AssemblyName(args.Name);
-            return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName() == name);
-        }
-
         internal SandboxLoader()
         {
 
