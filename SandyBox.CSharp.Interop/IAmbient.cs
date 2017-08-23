@@ -5,6 +5,11 @@ namespace SandyBox.CSharp.Interop
     public interface IAmbient : IServiceProvider
     {
         
+        /// <summary>
+        /// Gets the name of ambient container.
+        /// </summary>
+        string Name { get; }
+
     }
 
     public static class AmbientExtensions
@@ -19,5 +24,4 @@ namespace SandyBox.CSharp.Interop
         }
 
     }
-
 }

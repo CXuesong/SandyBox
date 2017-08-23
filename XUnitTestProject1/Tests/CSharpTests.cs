@@ -49,10 +49,19 @@ public class MyModule : Module
 
     public double Add(double x, double y) => x + y;
 
+    public string Add(string x, string y) => x + y;
+
 }
 ");
                 Assert.Equal(await sandbox.ExecuteAsync("Add", new JArray(10.23, 20.45), null),
                     new JValue(30.68));
+                Assert.Equal(await sandbox.ExecuteAsync("Add", new JArray("abcdef", "ABC"), null),
+                    new JValue("abcdefABC"));
+                Assert.Equal(await sandbox.ExecuteAsync("Add", new JArray("abc", null), null),
+                    new JValue("abc"));
+                var ex = await Assert.ThrowsAsync<JsonRpcRemoteException>(() =>
+                    sandbox.ExecuteAsync("Add", new JArray(10, null), null));
+                Assert.Equal(typeof(MissingMethodException).FullName, ex.RemoteException.ExceptionType);
             }
         }
 

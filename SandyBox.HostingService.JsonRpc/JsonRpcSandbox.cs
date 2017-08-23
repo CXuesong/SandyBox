@@ -27,14 +27,21 @@ namespace SandyBox.HostingService.JsonRpc
             using (var reader = new StreamReader(sourceStream))
             {
                 var s = await reader.ReadToEndAsync();
-                await Owner.HostingServerStub.LoadSource(Id, s);
+                await Owner.SandboxStub.LoadSource(Id, s);
             }
         }
 
         public override async Task<JToken> ExecuteAsync(string functionName, JArray positionalParameters, JObject namedParameters)
         {
-            return await Owner.HostingServerStub.InvokeFunction(Id, functionName, positionalParameters, namedParameters);
+            return await Owner.SandboxStub.Invoke(Id, functionName, positionalParameters, namedParameters);
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Owner.SandboxStub.Dispose(Id);
+            }
+        }
     }
 }

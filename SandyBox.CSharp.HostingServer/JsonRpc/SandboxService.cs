@@ -1,16 +1,20 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using JsonRpc.Standard.Contracts;
 using JsonRpc.Standard.Server;
 using Newtonsoft.Json.Linq;
 
-namespace SandyBox.CSharp.HostingServer
+namespace SandyBox.CSharp.HostingServer.JsonRpc
 {
-    public class HostingService : JsonRpcService
+    [JsonRpcScope(MethodPrefix = "Sandbox.")]
+    public class SandboxService : JsonRpcService
     {
 
         [JsonRpcMethod]
-        public int CreateSandbox(string sandboxName)
+        public int Create(string sandboxName)
         {
             return RequestContext.Features.Get<HostingServiceContext>().CreateSandbox(sandboxName);
         }
@@ -24,7 +28,7 @@ namespace SandyBox.CSharp.HostingServer
         }
 
         [JsonRpcMethod]
-        public JToken InvokeFunction(int sandbox, string name, IList<JToken> positionalParameters,
+        public JToken Invoke(int sandbox, string name, IList<JToken> positionalParameters,
             IDictionary<string, JToken> namedParameters)
         {
             var sb = RequestContext.Features.Get<HostingServiceContext>().GetSandbox(sandbox);
@@ -33,16 +37,10 @@ namespace SandyBox.CSharp.HostingServer
             return Utility.BsonDeserialize<JToken>(resultBson);
         }
 
-        [JsonRpcMethod]
-        public void DisposeSandbox(int sandbox)
+        [JsonRpcMethod(IsNotification = true)]
+        public void Dispose(int sandbox)
         {
             RequestContext.Features.Get<HostingServiceContext>().TerminateSandbox(sandbox);
-        }
-
-        [JsonRpcMethod]
-        public void Shutdown()
-        {
-            RequestContext.Features.Get<HostingServiceContext>().Dispose();
         }
 
     }

@@ -4,23 +4,30 @@ using Newtonsoft.Json.Linq;
 
 namespace SandyBox.HostingService.JsonRpc
 {
-    public interface IHostingServerStub
+    [JsonRpcScope(MethodPrefix = "Host.")]
+    public interface IHostStub
+    {
+
+        [JsonRpcMethod(IsNotification = true)]
+        void Shutdown();
+
+    }
+
+    [JsonRpcScope(MethodPrefix = "Sandbox.")]
+    public interface ISandboxStub
     {
 
         [JsonRpcMethod]
-        Task<int> CreateSandbox(string sandboxName);
+        Task<int> Create(string sandboxName);
 
         [JsonRpcMethod]
         Task LoadSource(int sandbox, string content);
 
         [JsonRpcMethod]
-        Task<JToken> InvokeFunction(int sandbox, string name, JArray positionalParameters, JObject namedParameters);
+        Task<JToken> Invoke(int sandbox, string name, JArray positionalParameters, JObject namedParameters);
 
         [JsonRpcMethod(IsNotification = true)]
-        void DisposeSandbox(int sandbox);
-
-        [JsonRpcMethod(IsNotification = true)]
-        void Shutdown();
+        void Dispose(int sandbox);
 
     }
 }

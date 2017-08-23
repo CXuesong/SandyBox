@@ -17,10 +17,11 @@ namespace SandyBox.HostingService.JsonRpc
     {
 
         private readonly Lazy<Task<Process>> _Process;
-        private List<IDisposable> disposables = new List<IDisposable>();
+        private List<IDisposable> disposables;
         private static readonly JsonRpcProxyBuilder proxyBuilder = new JsonRpcProxyBuilder();
 
-        public JsonRpcExecutionHost(string executablePath, string workingDirectory) : this(executablePath, workingDirectory, null)
+        public JsonRpcExecutionHost(string executablePath, string workingDirectory) : this(executablePath,
+            workingDirectory, null)
         {
         }
 
@@ -38,6 +39,9 @@ namespace SandyBox.HostingService.JsonRpc
 
         public string WorkingDirectory { get; }
 
+        /// <summary>
+        /// Gets the current process, or <c>null</c> if the process is yet to be started.
+        /// </summary>
         protected Process HostingServerProcess
         {
             get
@@ -50,9 +54,13 @@ namespace SandyBox.HostingService.JsonRpc
 
         public JsonRpcClient RpcClient { get; private set; }
 
-        public IHostingServerStub HostingServerStub { get; private set; }
+        public IHostStub HostStub { get; private set; }
 
-        protected virtual Process StartExecutionProcess(AnonymousPipeServerStream txPipe, AnonymousPipeServerStream rxPipe)
+        public ISandboxStub SandboxStub { get; private set; }
+
+
+        protected virtual Process StartExecutionProcess(AnonymousPipeServerStream txPipe,
+            AnonymousPipeServerStream rxPipe)
         {
             var startInfo = new ProcessStartInfo(ExecutablePath)
             {
@@ -80,6 +88,8 @@ namespace SandyBox.HostingService.JsonRpc
 
         private async Task<Process> StartProcessAsync()
         {
+            Debug.Assert(!_Process.IsValueCreated); // Can be called only once.
+            Debug.Assert(disposables == null);
             Directory.CreateDirectory(WorkingDirectory);
             Process process = null;
             var localDisposables = new List<IDisposable>();
@@ -128,7 +138,8 @@ namespace SandyBox.HostingService.JsonRpc
                 localDisposables.Add(serverHandler.Attach(procReader, procWriter));
                 localDisposables.Add(clientHandler.Attach(procReader, procWriter));
 
-                HostingServerStub = proxyBuilder.CreateProxy<IHostingServerStub>(RpcClient);
+                HostStub = proxyBuilder.CreateProxy<IHostStub>(RpcClient);
+                SandboxStub = proxyBuilder.CreateProxy<ISandboxStub>(RpcClient);
                 return process;
             }
             catch (Exception ex)
@@ -167,8 +178,7 @@ namespace SandyBox.HostingService.JsonRpc
             {
                 if (localDisposables != null)
                 {
-                    lock (disposables)
-                        disposables.AddRange(localDisposables);
+                    disposables = localDisposables;
                 }
             }
         }
@@ -176,7 +186,7 @@ namespace SandyBox.HostingService.JsonRpc
         public override async Task<Sandbox> CreateSandboxAsync(string name)
         {
             await EnsureProcessStartedAsync();
-            var id = await HostingServerStub.CreateSandbox(name);
+            var id = await SandboxStub.Create(name);
             return new JsonRpcSandbox(this, id, name);
         }
 
@@ -189,7 +199,7 @@ namespace SandyBox.HostingService.JsonRpc
                 if (!process.HasExited)
                 {
                     // Signal for shutdown.
-                    HostingServerStub.Shutdown();
+                    HostStub.Shutdown();
                     // Allow for 5 sec.
                     if (!process.WaitForExit(5000)) process.Kill();
                 }

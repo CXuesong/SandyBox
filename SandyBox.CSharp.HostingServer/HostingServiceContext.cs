@@ -15,6 +15,7 @@ using System.Xml;
 using System.Xml.Linq;
 using JsonRpc.Standard.Client;
 using Newtonsoft.Json.Linq;
+using SandyBox.CSharp.HostingServer.JsonRpc;
 
 namespace SandyBox.CSharp.HostingServer
 {
