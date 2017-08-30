@@ -9,16 +9,20 @@ using JsonRpc.Standard;
 using JsonRpc.Standard.Client;
 using JsonRpc.Standard.Server;
 using JsonRpc.Streams;
+using Newtonsoft.Json.Linq;
 using SandyBox.HostingService.Interop;
 
 namespace SandyBox.HostingService.JsonRpc
 {
+
     public class JsonRpcExecutionHost : ExecutionHost
     {
 
+        private static readonly JsonRpcProxyBuilder proxyBuilder = new JsonRpcProxyBuilder();
+
         private readonly Lazy<Task<Process>> _Process;
         private List<IDisposable> disposables;
-        private static readonly JsonRpcProxyBuilder proxyBuilder = new JsonRpcProxyBuilder();
+        private readonly Dictionary<int, Sandbox> sandboxDict = new Dictionary<int, Sandbox>();
 
         public JsonRpcExecutionHost(string executablePath, string workingDirectory) : this(executablePath,
             workingDirectory, null)
@@ -57,7 +61,6 @@ namespace SandyBox.HostingService.JsonRpc
         public IHostStub HostStub { get; private set; }
 
         public ISandboxStub SandboxStub { get; private set; }
-
 
         protected virtual Process StartExecutionProcess(AnonymousPipeServerStream txPipe,
             AnonymousPipeServerStream rxPipe)
@@ -187,7 +190,19 @@ namespace SandyBox.HostingService.JsonRpc
         {
             await EnsureProcessStartedAsync();
             var id = await SandboxStub.Create(name);
-            return new JsonRpcSandbox(this, id, name);
+            var sb = new JsonRpcSandbox(this, id, name);
+            lock (sandboxDict) sandboxDict.Add(id, sb);
+            return sb;
+        }
+
+        public override Sandbox TryGetSandbox(int id)
+        {
+            lock (sandboxDict)
+            {
+                if (sandboxDict.TryGetValue(id, out var sb))
+                    return sb;
+            }
+            return null;
         }
 
         protected override void Dispose(bool disposing)

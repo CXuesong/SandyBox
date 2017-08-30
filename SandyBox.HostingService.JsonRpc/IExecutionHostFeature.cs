@@ -26,10 +26,10 @@ namespace SandyBox.HostingService.JsonRpc
     public static class RequestContextExtensions
     {
 
-        public static THost GetExecutionHost<THost>(this RequestContext context) where THost : JsonRpcExecutionHost
+        public static JsonRpcExecutionHost GetExecutionHost(this RequestContext context)
         {
             if (context == null) throw new ArgumentNullException(nameof(context));
-            return (THost) context.Features.Get<IExecutionHostFeature>()?.ExecutionHost;
+            return context.Features.Get<IExecutionHostFeature>()?.ExecutionHost;
         }
 
     }

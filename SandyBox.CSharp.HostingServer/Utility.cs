@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Remoting;
 using System.Security;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,7 +13,7 @@ using Newtonsoft.Json.Linq;
 
 namespace SandyBox.CSharp.HostingServer
 {
-    public static class Utility
+    internal static class Utility
     {
 
         private static readonly JsonSerializer jsonSerializer = new JsonSerializer();
@@ -26,7 +27,7 @@ namespace SandyBox.CSharp.HostingServer
             using (var writer = new BsonDataWriter(ms))
             {
                 // The root of BSON must be an object or array, so we use an array to wrap actual value/object.
-                jsonSerializer.Serialize(writer, new[] {obj});
+                jsonSerializer.Serialize(writer, new[] { obj });
                 ms.Flush();
                 return ms.GetBuffer();
             }
@@ -44,6 +45,5 @@ namespace SandyBox.CSharp.HostingServer
                 return wrapper.Single();
             }
         }
-
     }
 }

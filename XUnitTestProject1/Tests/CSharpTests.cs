@@ -65,6 +65,42 @@ public class MyModule : Module
             }
         }
 
+        [Fact]
+        public async Task InvokeAmbientExecution()
+        {
+            using (var sandbox = await executionHost.CreateSandboxAsync("InvokeAmbientExecution"))
+            {
+                sandbox.InvokeAmbientHandler = async (name, parameters, sb, token) =>
+                {
+                    if (name == "Concat") return (string) parameters[0] + (string) parameters[1];
+                    throw new NotSupportedException();
+                };
+                await sandbox.LoadFromStringAsync(@"
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using SandyBox.CSharp.Interop;
+
+public class MyModule : Module {
+
+    public int Concat(int x, int y) {
+        var result = Ambient.InvokeAsync(""Concat"", new JArray(x, y), CancellationToken.None).Result;
+        return int.Parse((string) result);
+    }
+
+    public void Error() {
+        Ambient.InvokeAsync(""ABC"", null);
+    }
+
+}
+");
+                Assert.Equal(await sandbox.ExecuteAsync("Concat", new JArray(123, 456), null),
+                    new JValue(123456));
+            }
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)

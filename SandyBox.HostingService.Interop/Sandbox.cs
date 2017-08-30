@@ -16,6 +16,14 @@ namespace SandyBox.HostingService.Interop
 
         public string Name { get; }
 
+        /// <summary>
+        /// A handler used to process InvokeAmbient request from the sandbox.
+        /// </summary>
+        public InvokeAmbientAsyncHandler InvokeAmbientHandler { get; set; }
+
+        /// <summary>
+        /// Load source code from specified stream.
+        /// </summary>
         public abstract Task LoadFromAsync(Stream sourceStream);
         
         public virtual async Task LoadFromAsync(string fileName)

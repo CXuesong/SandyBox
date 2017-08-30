@@ -33,12 +33,13 @@ namespace SandyBox.CSharp.HostingServer.Ambient
 
         public int SandboxId { get; }
 
-        public async Task<JToken> InvokeAsync(string name, JToken parameters, CancellationToken cancellationToken)
+        public async Task<JTokenContainer> InvokeAsync(string name, JTokenContainer parameters)
         {
             if (string.IsNullOrEmpty(name)) throw new ArgumentException("Value cannot be null or empty.", nameof(name));
             try
             {
-                return await hostingClient.InvokeAmbient(name, parameters, SandboxId, cancellationToken);
+                return new JTokenContainer(await hostingClient.InvokeAmbient(name,
+                    (JToken) parameters, SandboxId, CancellationToken.None));
             }
             catch (JsonRpcException ex)
             {
