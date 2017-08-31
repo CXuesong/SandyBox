@@ -6,7 +6,7 @@ using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
 
-namespace SandyBox.CSharp.HostingServer
+namespace SandyBox.CSharp.HostingServer.Sandboxed
 {
     internal static class ModuleFunctionBinder
     {

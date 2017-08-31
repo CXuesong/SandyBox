@@ -18,7 +18,7 @@ namespace SandyBox.HostingService.JsonRpc
     public class JsonRpcExecutionHost : ExecutionHost
     {
 
-        private static readonly JsonRpcProxyBuilder proxyBuilder = new JsonRpcProxyBuilder();
+        internal static readonly JsonRpcProxyBuilder ProxyBuilder = new JsonRpcProxyBuilder();
 
         private readonly Lazy<Task<Process>> _Process;
         private List<IDisposable> disposables;
@@ -60,8 +60,6 @@ namespace SandyBox.HostingService.JsonRpc
 
         public IHostStub HostStub { get; private set; }
 
-        public ISandboxStub SandboxStub { get; private set; }
-
         protected virtual Process StartExecutionProcess(AnonymousPipeServerStream txPipe,
             AnonymousPipeServerStream rxPipe)
         {
@@ -77,11 +75,6 @@ namespace SandyBox.HostingService.JsonRpc
             if (!string.IsNullOrEmpty(ExecutableParameters))
                 startInfo.Arguments += " " + ExecutableParameters;
             return Process.Start(startInfo);
-        }
-
-        protected virtual void ConfigServiceHost(JsonRpcServiceHostBuilder builder)
-        {
-
         }
 
         private Task EnsureProcessStartedAsync()
@@ -130,19 +123,21 @@ namespace SandyBox.HostingService.JsonRpc
                     if (startedMessage == null)
                         throw new ExecutionHostException(Prompts.CannotStartExecutionHost_MissingNotifyStarted);
                 }
+
+                //// HOST
+                //var hostBuilder = new JsonRpcServiceHostBuilder();
+                //// Currently this host does nothing.
+                //var host = hostBuilder.Build();
+                //var serverHandler = new StreamRpcServerHandler(host);
+                //serverHandler.DefaultFeatures.Set<ISandboxContextFeature>(new SandboxContextFeature(this, null));
+                //localDisposables.Add(serverHandler.Attach(procReader, procWriter));
+
+                // CLIENT
                 var clientHandler = new StreamRpcClientHandler();
                 RpcClient = new JsonRpcClient(clientHandler);
-                var hostBuilder = new JsonRpcServiceHostBuilder();
-                ConfigServiceHost(hostBuilder);
-                var host = hostBuilder.Build();
-                var serverHandler = new StreamRpcServerHandler(host);
-                var feature = new ExecutionHostFeature(this);
-                serverHandler.DefaultFeatures.Set<IExecutionHostFeature>(feature);
-                localDisposables.Add(serverHandler.Attach(procReader, procWriter));
                 localDisposables.Add(clientHandler.Attach(procReader, procWriter));
 
-                HostStub = proxyBuilder.CreateProxy<IHostStub>(RpcClient);
-                SandboxStub = proxyBuilder.CreateProxy<ISandboxStub>(RpcClient);
+                HostStub = ProxyBuilder.CreateProxy<IHostStub>(RpcClient);
                 return process;
             }
             catch (Exception ex)
@@ -189,9 +184,9 @@ namespace SandyBox.HostingService.JsonRpc
         public override async Task<Sandbox> CreateSandboxAsync(string name)
         {
             await EnsureProcessStartedAsync();
-            var id = await SandboxStub.Create(name);
-            var sb = new JsonRpcSandbox(this, id, name);
-            lock (sandboxDict) sandboxDict.Add(id, sb);
+            var sb = new JsonRpcSandbox(this, name);
+            await sb.InitializeAsync();
+            lock (sandboxDict) sandboxDict.Add(sb.Id, sb);
             return sb;
         }
 

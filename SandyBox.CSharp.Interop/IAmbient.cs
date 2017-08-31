@@ -17,22 +17,17 @@ namespace SandyBox.CSharp.Interop
         /// <summary>
         /// Invokes ambient-specific functions.
         /// </summary>
-        Task<JTokenContainer> InvokeAsync(string name, JTokenContainer parameters);
+        Task<JToken> InvokeAsync(string name, JToken parameters);
 
     }
 
     public static class AmbientExtensions
     {
 
-        public static Task<JToken> InvokeAsync(this IAmbient ambient, string name, JToken parameters)
-        {
-            return InvokeAsync(ambient, name, parameters, CancellationToken.None);
-        }
-
-        public static async Task<JToken> InvokeAsync(this IAmbient ambient, string name, JToken parameters, CancellationToken cancellationToken)
+        public static JToken Invoke(this IAmbient ambient, string name, JToken parameters)
         {
             if (ambient == null) throw new ArgumentNullException(nameof(ambient));
-            return (JToken) await ambient.InvokeAsync(name, new JTokenContainer(parameters));
+            return ambient.InvokeAsync(name, parameters).GetAwaiter().GetResult();
         }
 
     }

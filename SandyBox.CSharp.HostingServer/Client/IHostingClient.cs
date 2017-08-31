@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using JsonRpc.Standard.Contracts;
 using Newtonsoft.Json.Linq;
 
-namespace SandyBox.CSharp.HostingServer.JsonRpc
+namespace SandyBox.CSharp.HostingServer.Client
 {
     public interface IHostingClient
     {

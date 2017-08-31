@@ -11,6 +11,15 @@ namespace SandyBox.HostingService.JsonRpc
         [JsonRpcMethod(IsNotification = true)]
         void Shutdown();
 
+        [JsonRpcMethod]
+        Task<int> CreateSandbox(string name, string pipe);
+
+        /// <summary>
+        /// Compiles and loads the source code into the specified sandbox.
+        /// </summary>
+        [JsonRpcMethod]
+        Task LoadSource(int sandbox, string content, string fileName);
+
     }
 
     [JsonRpcScope(MethodPrefix = "Sandbox.")]
@@ -18,16 +27,10 @@ namespace SandyBox.HostingService.JsonRpc
     {
 
         [JsonRpcMethod]
-        Task<int> Create(string sandboxName);
-
-        [JsonRpcMethod]
-        Task LoadSource(int sandbox, string content);
-
-        [JsonRpcMethod]
-        Task<JToken> Invoke(int sandbox, string name, JArray positionalParameters, JObject namedParameters);
+        Task<JToken> Invoke(string name, JArray positionalParameters, JObject namedParameters);
 
         [JsonRpcMethod(IsNotification = true)]
-        void Dispose(int sandbox);
+        void Dispose();
 
     }
 }

@@ -1,31 +1,90 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
+using System.IO.Pipes;
 using System.Linq;
 using System.Reflection;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
+using System.Threading.Tasks;
+using JsonRpc.Standard.Client;
+using JsonRpc.Standard.Server;
+using JsonRpc.Streams;
 using Newtonsoft.Json.Linq;
-using SandyBox.CSharp.HostingServer.Ambient;
+using SandyBox.CSharp.HostingServer.Client;
+using SandyBox.CSharp.HostingServer.Host;
 using SandyBox.CSharp.Interop;
 
-namespace SandyBox.CSharp.HostingServer
+namespace SandyBox.CSharp.HostingServer.Sandboxed
 {
     /// <summary>
-    /// A loader class used in the sandbox appdomain.
+    /// A loader class used to bootstrap in the sandbox appdomain.
     /// </summary>
     internal sealed class SandboxLoader : MarshalByRefObject, IDisposable
     {
+
+        private readonly HostCallbackHandler hostCallback;
         private IModule _ClientModule;
         private readonly Dictionary<string, IList<MethodInfo>> nameMethodDict = new Dictionary<string, IList<MethodInfo>>();
+        private IHostingClient hostingClient;
+        private readonly string pipeName;
+        private readonly TaskCompletionSource<bool> disposalTcs = new TaskCompletionSource<bool>();
 
-        internal SandboxLoader(IAmbient ambient)
+        internal SandboxLoader(int sandboxId, string pipeName, HostCallbackHandler hostCallback)
         {
-            Ambient = ambient ?? throw new ArgumentNullException(nameof(ambient));
+            SandboxId = sandboxId;
+            this.pipeName = pipeName ?? throw new ArgumentNullException(nameof(pipeName));
+            this.hostCallback = hostCallback ?? throw new ArgumentNullException(nameof(hostCallback));
+            var forgetit = RunAsync();
         }
 
-        public IAmbient Ambient { get; }
+        public int SandboxId { get; }
+
+        private static IJsonRpcServiceHost BuildServiceHost()
+        {
+            var builder = new JsonRpcServiceHostBuilder();
+            builder.Register<SandboxRpcService>();
+            return builder.Build();
+        }
+
+        private async Task RunAsync()
+        {
+            var host = BuildServiceHost();
+            var serverHandler = new StreamRpcServerHandler(host);
+            var clientHandler = new StreamRpcClientHandler();
+            var client = new JsonRpcClient(clientHandler);
+            using (var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous))
+            {
+                var connectTask = pipe.ConnectAsync();
+                hostingClient = new HostingClientRpcProxy(client);
+                serverHandler.DefaultFeatures.Set(this);
+                var reader = new ByLineTextMessageReader(pipe) { LeaveReaderOpen = true };
+                var writer = new ByLineTextMessageWriter(pipe) { LeaveWriterOpen = true };
+
+                Ambient = new SandboxAmbient(hostingClient, SandboxId);
+
+                await connectTask;
+                using (reader)
+                using (writer)
+                using (serverHandler.Attach(reader, writer))
+                using (clientHandler.Attach(reader, writer))
+                {
+                    // Started up
+                    hostingClient.NotifyStarted();
+                    // Wait for disposal
+                    await disposalTcs.Task;
+                }
+            }
+            // Dispose
+            if (_ClientModule != null)
+            {
+                if (_ClientModule is IDisposable d) d.Dispose();
+                _ClientModule = null;
+            }
+            // Final cleanup.
+            // The owner will unload appdomain so a ThreadAbortException should be thrown here.
+            hostCallback.NotifySandboxDisposed(SandboxId);
+        }
+
+        public IAmbient Ambient { get; private set; }
 
         public void LoadAssembly(string assemblyPath)
         {
@@ -69,16 +128,7 @@ namespace SandyBox.CSharp.HostingServer
             }
         }
 
-        // This is remoting-friendly.
-        public byte[] InvokeBson(string functionName, byte[] positionalParameters, byte[] namedParameters)
-        {
-            var result = Invoke(functionName, Utility.BsonDeserialize<IList<JToken>>(positionalParameters),
-                Utility.BsonDeserialize<IDictionary<string, JToken>>(namedParameters));
-            return Utility.BsonSerialize(result);
-        }
-
-        // JToken is not serializable
-        public JToken Invoke(string functionName, IList<JToken> positionalParameters,
+        public async Task<JToken> InvokeAsync(string functionName, IList<JToken> positionalParameters,
             IDictionary<string, JToken> namedParameters)
         {
             if (string.IsNullOrEmpty(functionName))
@@ -98,19 +148,24 @@ namespace SandyBox.CSharp.HostingServer
             var parameters = ModuleFunctionBinder.BindParameters(method, positionalParameters, namedParameters);
             var result = method.Invoke(_ClientModule, parameters);
             if (method.ReturnParameter.ParameterType == typeof(void)) return null;
+            if (result is Task t)
+            {
+                await t.ConfigureAwait(false);
+                result = result.GetType().GetProperty("Result").GetValue(result);
+            }
             return ModuleFunctionBinder.SerializeReturnValue(result);
         }
 
         public IModule ClientModule => _ClientModule;
 
+        /// <summary>
+        /// Notifies the loader the sandbox is to be cleaned up.
+        /// </summary>
         public void Dispose()
         {
-            if (_ClientModule != null)
-            {
-                if (_ClientModule is IDisposable d) d.Dispose();
-                _ClientModule = null;
-            }
+            disposalTcs.TrySetResult(true);
         }
+
     }
 
 }

@@ -14,7 +14,7 @@ namespace SandyBox.CSharp.Interop
         {
         }
 
-        public ModuleLoaderException(Exception inner) : base(null, inner)
+        public ModuleLoaderException(Exception inner) : this(null, inner)
         {
         }
 

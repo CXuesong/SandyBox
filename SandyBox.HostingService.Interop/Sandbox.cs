@@ -24,13 +24,13 @@ namespace SandyBox.HostingService.Interop
         /// <summary>
         /// Load source code from specified stream.
         /// </summary>
-        public abstract Task LoadFromAsync(Stream sourceStream);
-        
+        public abstract Task LoadFromAsync(Stream sourceStream, string fileName);
+
         public virtual async Task LoadFromAsync(string fileName)
         {
             using (var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
             {
-                await LoadFromAsync(fs);
+                await LoadFromAsync(fs, fileName);
             }
         }
 

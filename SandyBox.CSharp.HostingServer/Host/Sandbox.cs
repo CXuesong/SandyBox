@@ -1,4 +1,8 @@
-﻿using System;
+﻿#if DEBUG
+//#define FULL_TRUSTED_SANDBOX        // Gives sandbox AppDomain full trust. For debugging purpose.
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,14 +13,14 @@ using System.Security.Permissions;
 using System.Security.Policy;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
-using Newtonsoft.Json.Linq;
-using SandyBox.CSharp.HostingServer.Ambient;
-using SandyBox.CSharp.HostingServer.JsonRpc;
+using SandyBox.CSharp.HostingServer.Sandboxed;
 using SandyBox.CSharp.Interop;
 
-namespace SandyBox.CSharp.HostingServer
+namespace SandyBox.CSharp.HostingServer.Host
 {
+    /// <summary>
+    /// Contains the state of sandbox AppDomain for the host.
+    /// </summary>
     internal sealed class Sandbox : IDisposable
     {
         private AppDomain _AppDomain;
@@ -24,11 +28,12 @@ namespace SandyBox.CSharp.HostingServer
         private readonly ModuleCompiler compiler = new ModuleCompiler();
         private int assemblyCounter = 0;
 
-        public Sandbox(string name, string workPath, IEnumerable<string> accessiblePaths, SandboxAmbient ambient)
+        public Sandbox(int id, string name, string workPath, IEnumerable<string> accessiblePaths, string pipeName, HostCallbackHandler hostCallback)
         {
             if (string.IsNullOrEmpty(workPath))
                 throw new ArgumentException("Value cannot be null or empty.", nameof(workPath));
             WorkPath = Path.GetFullPath(workPath);
+            Id = id;
             Name = name;
             var permissions = new PermissionSet(PermissionState.None);
             permissions.AddPermission(new SecurityPermission(
@@ -57,20 +62,25 @@ namespace SandyBox.CSharp.HostingServer
                 new FileIOPermission(FileIOPermissionAccess.PathDiscovery | FileIOPermissionAccess.Read,
                     WorkPath));
             // Set up AppDomain
+#if FULL_TRUSTED_SANDBOX
+            _AppDomain = AppDomain.CreateDomain("Sandbox: " + name, null, setup);
+#else
             _AppDomain = AppDomain.CreateDomain("Sandbox: " + name, null, setup, permissions,
                 trustedAssemblies.Select(a => a.Evidence.GetHostEvidence<StrongName>()).ToArray());
-            Ambient = ambient;
+#endif
             // Create loader proxy
             // We will pass the proxy of SandboxAmbient into loader.
-            Loader = (SandboxLoader) Activator.CreateInstanceFrom(_AppDomain,
+            Loader = (SandboxLoader)Activator.CreateInstanceFrom(_AppDomain,
                 typeof(SandboxLoader).Assembly.Location,
                 typeof(SandboxLoader).FullName, false,
                 BindingFlags.CreateInstance | BindingFlags.Instance | BindingFlags.NonPublic,
-                null, new object[] {Ambient}, null, null).Unwrap();
+                null, new object[] { Id, pipeName, hostCallback }, null, null).Unwrap();
             var lifeTime = (ILease)Loader.InitializeLifetimeService();
             loaderSponsor = new Sponsor();
             lifeTime.Register(loaderSponsor);
         }
+
+        public int Id { get; }
 
         public string Name { get; }
 

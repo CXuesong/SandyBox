@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 
-namespace Marigold.Scripting.CSharp.Hosting.CommandLine
+namespace SandyBox.CSharp.HostingServer.CommandLine
 {
 
     public class CommandArgument

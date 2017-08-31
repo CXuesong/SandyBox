@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
@@ -12,7 +10,7 @@ using Microsoft.CodeAnalysis.Text;
 using Newtonsoft.Json.Linq;
 using SandyBox.CSharp.Interop;
 
-namespace SandyBox.CSharp.HostingServer
+namespace SandyBox.CSharp.HostingServer.Host
 {
     public class ModuleCompiler
     {

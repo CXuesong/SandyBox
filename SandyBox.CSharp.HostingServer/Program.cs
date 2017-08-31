@@ -8,8 +8,9 @@ using System.Threading;
 using JsonRpc.Standard.Client;
 using JsonRpc.Standard.Server;
 using JsonRpc.Streams;
-using Marigold.Scripting.CSharp.Hosting.CommandLine;
 using Microsoft.Extensions.Logging;
+using SandyBox.CSharp.HostingServer.CommandLine;
+using SandyBox.CSharp.HostingServer.Host;
 
 namespace SandyBox.CSharp.HostingServer
 {
@@ -33,7 +34,7 @@ namespace SandyBox.CSharp.HostingServer
             var serverHandler = new StreamRpcServerHandler(host);
             var clientHandler = new StreamRpcClientHandler();
             var client = new JsonRpcClient(clientHandler);
-            var serviceContext = new HostingServiceContext(client, CommandLineArguments.SandboxPath);
+            var serviceContext = new SandboxHost(client, CommandLineArguments.SandboxPath);
             serverHandler.DefaultFeatures.Set(serviceContext);
             // Messages come from Console
             ByLineTextMessageReader reader;

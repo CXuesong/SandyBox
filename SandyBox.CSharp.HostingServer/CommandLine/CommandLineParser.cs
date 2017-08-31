@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace Marigold.Scripting.CSharp.Hosting.CommandLine
+namespace SandyBox.CSharp.HostingServer.CommandLine
 {
     public static class CommandLineParser
     {

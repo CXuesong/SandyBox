@@ -19,7 +19,7 @@ namespace XUnitTestProject1
             var buffer = Utf8NoBom.GetBytes(s);
             using (var ms = new MemoryStream(buffer))
             {
-                await sb.LoadFromAsync(ms);
+                await sb.LoadFromAsync(ms, null);
             }
         }
 

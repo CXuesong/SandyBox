@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -15,28 +14,29 @@ using System.Xml;
 using System.Xml.Linq;
 using JsonRpc.Standard.Client;
 using Newtonsoft.Json.Linq;
-using SandyBox.CSharp.HostingServer.Ambient;
-using SandyBox.CSharp.HostingServer.JsonRpc;
+using SandyBox.CSharp.HostingServer.Client;
 
-namespace SandyBox.CSharp.HostingServer
+namespace SandyBox.CSharp.HostingServer.Host
 {
-    internal class HostingServiceContext : IDisposable
+    internal class SandboxHost : IDisposable
     {
         private static readonly JsonRpcProxyBuilder proxyBuilder = new JsonRpcProxyBuilder();
+        private static readonly List<string> preloadedLibraries;
 
         private int counter = 0;
         private ConcurrentDictionary<int, Sandbox> sandboxes = new ConcurrentDictionary<int, Sandbox>();
         private readonly TaskCompletionSource<bool> disposalTcs = new TaskCompletionSource<bool>();
+        private readonly HostCallbackHandler callbackHandler;
 
-        private static readonly List<string> preloadedLibraries;
 
-        public HostingServiceContext(JsonRpcClient rpcClient, string sandboxWorkPath)
+        public SandboxHost(JsonRpcClient rpcClient, string sandboxWorkPath)
         {
             SandboxWorkPath = sandboxWorkPath;
             HostingClient = proxyBuilder.CreateProxy<IHostingClient>(rpcClient);
+            callbackHandler = new HostCallbackHandler(this);
         }
 
-        static HostingServiceContext()
+        static SandboxHost()
         {
             preloadedLibraries = new List<string>
             {
@@ -56,14 +56,16 @@ namespace SandyBox.CSharp.HostingServer
                 .Select(a => a.Location));
         }
 
+
         public string SandboxWorkPath { get; }
 
         public Task Disposal => disposalTcs.Task;
 
         public IHostingClient HostingClient { get; }
 
-        public int CreateSandbox(string sandboxName)
+        public int CreateSandbox(string sandboxName, string pipeName)
         {
+            if (pipeName == null) throw new ArgumentNullException(nameof(pipeName));
             var id = Interlocked.Increment(ref counter);
             var folderName = $"Sandbox{GetHashCode()}#{counter}";
             int folderNameSuffix = 0;
@@ -74,8 +76,7 @@ namespace SandyBox.CSharp.HostingServer
             }
             var workPath = Path.Combine(SandboxWorkPath, folderName);
             Directory.CreateDirectory(workPath);
-            var ambient = new SandboxAmbient(HostingClient, id);
-            var sandbox = new Sandbox(sandboxName, workPath, preloadedLibraries, ambient);
+            var sandbox = new Sandbox(id, sandboxName, workPath, preloadedLibraries, pipeName, callbackHandler);
             var result = sandboxes.TryAdd(id, sandbox);
             Debug.Assert(result);
             return id;
@@ -86,6 +87,13 @@ namespace SandyBox.CSharp.HostingServer
             return sandboxes[id];
         }
 
+        /// <summary>
+        /// Terminates the sandbox, along with the AppDomain it resides in.
+        /// </summary>
+        /// <remarks>
+        /// This method is called either from <see cref="SandboxLoader"/>, as the last part of graceful shutdown,
+        /// or it might be called from elsewhere to terminate the sandbox.
+        /// </remarks>
         public void TerminateSandbox(int id)
         {
             if (!sandboxes.TryRemove(id, out var sb))

@@ -6,21 +6,27 @@ using SandyBox.HostingService.Interop;
 
 namespace SandyBox.HostingService.JsonRpc
 {
-    public interface IExecutionHostFeature
+
+    public interface ISandboxContextFeature
     {
 
         JsonRpcExecutionHost ExecutionHost { get; }
 
+        JsonRpcSandbox Sandbox { get; }
+        
     }
 
-    public class ExecutionHostFeature : IExecutionHostFeature
+    internal class SandboxContextFeature : ISandboxContextFeature
     {
-        public ExecutionHostFeature(JsonRpcExecutionHost executionHost)
+        public SandboxContextFeature(JsonRpcExecutionHost executionHost, JsonRpcSandbox sandbox)
         {
             ExecutionHost = executionHost ?? throw new ArgumentNullException(nameof(executionHost));
+            Sandbox = sandbox;
         }
 
         public JsonRpcExecutionHost ExecutionHost { get; }
+
+        public JsonRpcSandbox Sandbox { get; }
     }
 
     public static class RequestContextExtensions
@@ -29,7 +35,7 @@ namespace SandyBox.HostingService.JsonRpc
         public static JsonRpcExecutionHost GetExecutionHost(this RequestContext context)
         {
             if (context == null) throw new ArgumentNullException(nameof(context));
-            return context.Features.Get<IExecutionHostFeature>()?.ExecutionHost;
+            return context.Features.Get<ISandboxContextFeature>()?.ExecutionHost;
         }
 
     }

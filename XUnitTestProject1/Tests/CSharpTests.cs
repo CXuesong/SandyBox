@@ -29,10 +29,10 @@ namespace XUnitTestProject1.Tests
             {
                 using (var sandbox = await executionHost.CreateSandboxAsync("Empty"))
                 {
-                    await sandbox.LoadFromAsync(Stream.Null);
+                    await sandbox.LoadFromAsync(Stream.Null, null);
                 }
             });
-            Assert.Equal(ex.RemoteException.ExceptionType, typeof(MissingModuleException).FullName);
+            Assert.Equal(typeof(MissingModuleException).FullName, ex.RemoteException.ExceptionType);
         }
 
         [Fact]
@@ -72,7 +72,7 @@ public class MyModule : Module
             {
                 sandbox.InvokeAmbientHandler = async (name, parameters, sb, token) =>
                 {
-                    if (name == "Concat") return (string) parameters[0] + (string) parameters[1];
+                    if (name == "Concat") return (string)parameters[0] + (string)parameters[1];
                     throw new NotSupportedException();
                 };
                 await sandbox.LoadFromStringAsync(@"
@@ -86,7 +86,7 @@ using SandyBox.CSharp.Interop;
 public class MyModule : Module {
 
     public int Concat(int x, int y) {
-        var result = Ambient.InvokeAsync(""Concat"", new JArray(x, y), CancellationToken.None).Result;
+        var result = Ambient.InvokeAsync(""Concat"", new JArray(x, y)).Result;
         return int.Parse((string) result);
     }
 

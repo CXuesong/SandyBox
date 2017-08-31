@@ -1,19 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
 using System.Runtime.Remoting;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using JsonRpc.Standard;
-using JsonRpc.Standard.Client;
 using Newtonsoft.Json.Linq;
-using SandyBox.CSharp.HostingServer.JsonRpc;
+using SandyBox.CSharp.HostingServer.Client;
 using SandyBox.CSharp.Interop;
 
-namespace SandyBox.CSharp.HostingServer.Ambient
+namespace SandyBox.CSharp.HostingServer.Sandboxed
 {
 
     internal sealed class SandboxAmbient : MarshalByRefObject, IAmbient
@@ -26,25 +21,18 @@ namespace SandyBox.CSharp.HostingServer.Ambient
             Debug.Assert(AppDomain.CurrentDomain.IsFullyTrusted, "This class should be instantiated in the main AppDomain.");
             this.hostingClient = hostingClient ?? throw new ArgumentNullException(nameof(hostingClient));
             SandboxId = sandboxId;
-            Name = "C# Sandbox";
+            Name = "C# Sandbox, " + sandboxId;
         }
 
         public string Name { get; }
 
         public int SandboxId { get; }
 
-        public async Task<JTokenContainer> InvokeAsync(string name, JTokenContainer parameters)
+        public async Task<JToken> InvokeAsync(string name, JToken parameters)
         {
             if (string.IsNullOrEmpty(name)) throw new ArgumentException("Value cannot be null or empty.", nameof(name));
-            try
-            {
-                return new JTokenContainer(await hostingClient.InvokeAmbient(name,
-                    (JToken) parameters, SandboxId, CancellationToken.None));
-            }
-            catch (JsonRpcException ex)
-            {
-                throw new RemotingException(ex.ToString());
-            }
+            var result = await hostingClient.InvokeAmbient(name, parameters, SandboxId, CancellationToken.None);
+            return result;
         }
 
     }
