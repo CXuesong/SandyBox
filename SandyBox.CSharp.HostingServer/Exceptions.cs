@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Runtime.Serialization;
+using System.Security;
 
-namespace SandyBox.CSharp.Interop
+namespace SandyBox.CSharp.HostingServer
 {
     [Serializable]
     public class ModuleLoaderException : Exception
     {
-        public ModuleLoaderException() : this(null,null)
+        public ModuleLoaderException() : this(null, null)
         {
         }
 
@@ -22,9 +23,9 @@ namespace SandyBox.CSharp.Interop
         {
         }
 
-        protected ModuleLoaderException(
-            SerializationInfo info,
-            StreamingContext context) : base(info, context)
+        [SecuritySafeCritical]
+        protected ModuleLoaderException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
         {
         }
 
@@ -46,9 +47,9 @@ namespace SandyBox.CSharp.Interop
         {
         }
 
-        protected MissingModuleException(
-            SerializationInfo info,
-            StreamingContext context) : base(info, context)
+        [SecuritySafeCritical]
+        protected MissingModuleException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
         {
         }
     }
@@ -69,9 +70,9 @@ namespace SandyBox.CSharp.Interop
         {
         }
 
-        protected AmbiguousModuleException(
-            SerializationInfo info,
-            StreamingContext context) : base(info, context)
+        [SecuritySafeCritical]
+        protected AmbiguousModuleException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
         {
         }
     }

@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using JsonRpc.Standard;
 using JsonRpc.Standard.Client;
 using Newtonsoft.Json.Linq;
-using SandyBox.CSharp.Interop;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,7 +31,7 @@ namespace XUnitTestProject1.Tests
                     await sandbox.LoadFromAsync(Stream.Null, null);
                 }
             });
-            Assert.Equal(typeof(MissingModuleException).FullName, ex.RemoteException.ExceptionType);
+            Assert.Equal("SandyBox.CSharp.HostingServer.MissingModuleException", ex.RemoteException.ExceptionType);
         }
 
         [Fact]
@@ -90,14 +89,15 @@ public class MyModule : Module {
         return int.Parse((string) result);
     }
 
-    public void Error() {
-        Ambient.InvokeAsync(""ABC"", null);
+    public void InvokeMissingMethod() {
+        Ambient.Invoke(""ABC"", null);
     }
 
 }
 ");
                 Assert.Equal(await sandbox.ExecuteAsync("Concat", new JArray(123, 456), null),
                     new JValue(123456));
+                Assert.Equal(await sandbox.ExecuteAsync("InvokeMissingMethod", null, null), new JValue(123456));
             }
         }
 
