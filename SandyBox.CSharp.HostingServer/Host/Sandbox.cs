@@ -13,6 +13,9 @@ using System.Security.Permissions;
 using System.Security.Policy;
 using System.Threading;
 using System.Threading.Tasks;
+using JsonRpc.Standard.Server;
+using JsonRpc.Streams;
+using Newtonsoft.Json.Linq;
 using SandyBox.CSharp.HostingServer.Sandboxed;
 using SandyBox.CSharp.Interop;
 
@@ -48,6 +51,9 @@ namespace SandyBox.CSharp.HostingServer.Host
             {
                 typeof(SandboxLoader).Assembly,
                 typeof(IModule).Assembly,
+                typeof(JToken).Assembly,
+                typeof(JsonRpcService).Assembly,
+                typeof(StreamRpcServerHandler).Assembly,
             };
             permissions.AddPermission(new FileIOPermission(
                 FileIOPermissionAccess.PathDiscovery | FileIOPermissionAccess.Read,

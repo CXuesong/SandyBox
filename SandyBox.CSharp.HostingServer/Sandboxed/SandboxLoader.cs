@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO.Pipes;
 using System.Linq;
 using System.Reflection;
+using System.Security;
 using System.Threading.Tasks;
 using JsonRpc.Standard.Client;
 using JsonRpc.Standard.Server;
@@ -20,6 +21,8 @@ namespace SandyBox.CSharp.HostingServer.Sandboxed
     /// </summary>
     internal sealed class SandboxLoader : MarshalByRefObject, IDisposable
     {
+
+        private static readonly JsonRpcProxyBuilder proxyBuilder = new JsonRpcProxyBuilder();
 
         private readonly HostCallbackHandler hostCallback;
         private IModule _ClientModule;
@@ -45,6 +48,13 @@ namespace SandyBox.CSharp.HostingServer.Sandboxed
             return builder.Build();
         }
 
+        [SecuritySafeCritical]
+        private static IHostingClient BuildHostingClient(JsonRpcClient client)
+        {
+            Debug.Assert(client != null);
+            return proxyBuilder.CreateProxy<IHostingClient>(client);
+        }
+
         private async Task RunAsync()
         {
             var host = BuildServiceHost();
@@ -54,7 +64,7 @@ namespace SandyBox.CSharp.HostingServer.Sandboxed
             using (var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous))
             {
                 var connectTask = pipe.ConnectAsync();
-                hostingClient = new HostingClientRpcProxy(client);
+                hostingClient = BuildHostingClient(client);
                 serverHandler.DefaultFeatures.Set(this);
                 var reader = new ByLineTextMessageReader(pipe) { LeaveReaderOpen = true };
                 var writer = new ByLineTextMessageWriter(pipe) { LeaveWriterOpen = true };

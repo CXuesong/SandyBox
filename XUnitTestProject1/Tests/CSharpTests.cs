@@ -86,7 +86,7 @@ using SandyBox.CSharp.Interop;
 public class MyModule : Module {
 
     public int Concat(int x, int y) {
-        var result = Ambient.InvokeAsync(""Concat"", new JArray(x, y)).Result;
+        var result = Ambient.Invoke(""Concat"", new JArray(x, y));
         return int.Parse((string) result);
     }
 

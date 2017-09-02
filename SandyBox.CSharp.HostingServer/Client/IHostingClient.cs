@@ -22,6 +22,7 @@ namespace SandyBox.CSharp.HostingServer.Client
         /// <param name="sandbox">The sandbox initiated the request.</param>
         /// <param name="cancellationToken"></param>
         /// <returns>Invocation result.</returns>
+        [JsonRpcMethod]
         Task<JToken> InvokeAmbient(string methodName, JToken parameters, int sandbox, CancellationToken cancellationToken);
 
     }

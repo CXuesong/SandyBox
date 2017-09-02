@@ -11,6 +11,7 @@ namespace SandyBox.HostingService.JsonRpc
     public sealed class HostingClientService : JsonRpcService
     {
 
+        [JsonRpcMethod]
         public Task<JToken> InvokeAmbient(string methodName, JToken parameters, int sandbox,
             CancellationToken cancellationToken)
         {
